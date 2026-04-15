@@ -61,6 +61,7 @@
 body {
   font-family: "Inter", sans-serif;
   background-color: #f7f9fb;
+  overflow: hidden;
 }
 
 h1,
@@ -68,4 +69,82 @@ h2,
 h3,
 .headline {
   font-family: "Manrope", sans-serif;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.resize-edge {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: auto;
+}
+
+.resize-edge-top {
+  top: 0;
+  left: 8px;
+  right: 8px;
+  height: 4px;
+  cursor: n-resize;
+}
+
+.resize-edge-bottom {
+  bottom: 0;
+  left: 8px;
+  right: 8px;
+  height: 4px;
+  cursor: s-resize;
+}
+
+.resize-edge-left {
+  top: 8px;
+  left: 0;
+  bottom: 8px;
+  width: 4px;
+  cursor: w-resize;
+}
+
+.resize-edge-right {
+  top: 52px;
+  right: 0;
+  bottom: 8px;
+  width: 4px;
+  cursor: e-resize;
+}
+
+.resize-corner-tl {
+  top: 0;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  cursor: nw-resize;
+}
+
+.resize-corner-tr {
+  top: 0;
+  right: 0;
+  width: 8px;
+  height: 4px;
+  cursor: ne-resize;
+}
+
+.resize-corner-bl {
+  bottom: 0;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  cursor: sw-resize;
+}
+
+.resize-corner-br {
+  bottom: 0;
+  right: 0;
+  width: 8px;
+  height: 8px;
+  cursor: se-resize;
 }

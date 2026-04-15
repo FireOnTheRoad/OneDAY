@@ -2,71 +2,88 @@
   <section class="w-1/2 h-full flex flex-col bg-surface-container-low">
     <div class="p-6 border-b border-surface-container bg-surface-container-lowest">
       <div class="flex justify-between items-center mb-6">
-        <h2 class="text-xl font-extrabold text-on-surface headline">Schedule & Tracking</h2>
+        <h2 class="text-xl font-extrabold text-on-surface headline">日程与追踪</h2>
         <div class="flex items-center gap-2 bg-surface-container p-1 rounded-lg">
           <button
             v-for="tab in tabs"
-            :key="tab"
+            :key="tab.value"
             :class="[
               'px-3 py-1 text-xs font-bold rounded',
-              tab === activeTab
+              tab.value === activeTab
                 ? 'bg-surface-container-lowest shadow-sm'
                 : 'text-on-surface-variant hover:text-on-surface'
             ]"
-            @click="activeTab = tab"
+            @click="activeTab = tab.value"
           >
-            {{ tab }}
+            {{ tab.label }}
           </button>
         </div>
       </div>
 
-      <div class="flex items-center justify-between bg-primary p-4 rounded-2xl text-on-primary shadow-lg shadow-primary/20">
+      <div v-if="activeTimer" class="flex items-center justify-between bg-primary p-4 rounded-2xl text-on-primary shadow-lg shadow-primary/20">
         <div class="flex items-center gap-4">
-          <button class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition-all active:scale-90">
-            <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">pause</span>
-          </button>
+          <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center animate-pulse">
+            <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">timer</span>
+          </div>
           <div>
-            <div class="text-[10px] uppercase tracking-widest font-bold opacity-80">Currently Tracking</div>
-            <div class="font-bold text-lg">Finalize Design Proposals</div>
+            <div class="text-[10px] uppercase tracking-widest font-bold opacity-80">正在追踪</div>
+            <div class="font-bold text-lg">{{ activeTimer.taskTitle || '未命名任务' }}</div>
           </div>
         </div>
         <div class="text-3xl font-mono font-bold tracking-tighter">
-          {{ timerDisplay }}
+          {{ activeTimerDisplay }}
         </div>
+      </div>
+      <div v-else class="flex items-center justify-between bg-surface-container p-4 rounded-2xl">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 bg-surface-container-high rounded-full flex items-center justify-center">
+            <span class="material-symbols-outlined text-on-surface-variant">timer_off</span>
+          </div>
+          <div>
+            <div class="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant">未在追踪</div>
+            <div class="font-bold text-lg text-on-surface-variant">点击日程页开始计时</div>
+          </div>
+        </div>
+        <router-link
+          to="/schedule"
+          class="flex items-center gap-2 bg-primary text-on-primary px-4 py-2 rounded-xl font-bold shadow-sm hover:opacity-90 active:scale-95 transition-all"
+        >
+          <span class="material-symbols-outlined text-sm">play_arrow</span>
+          <span class="text-sm">开始</span>
+        </router-link>
       </div>
     </div>
 
     <div class="flex-1 overflow-y-auto p-6">
-      <div class="relative min-h-[800px]">
+      <div class="relative" :style="{ height: timelineHeight + 'px' }">
         <div class="absolute inset-0 flex flex-col">
           <div
             v-for="hour in timeSlots"
-            :key="hour"
-            class="h-20 border-b border-surface-container-highest flex items-start pt-2 px-2 text-[10px] font-bold text-on-surface-variant/40"
+            :key="hour.label"
+            class="border-b border-surface-container-highest flex items-start pt-2 px-2 text-[10px] font-bold text-on-surface-variant/40"
+            :style="{ height: HOUR_HEIGHT + 'px' }"
           >
-            {{ hour }}
+            {{ hour.label }}
           </div>
         </div>
 
         <div
-          v-for="event in scheduleEvents"
-          :key="event.id"
-          :class="[
-            'absolute left-16 right-0 backdrop-blur-sm border-l-4 rounded-r-xl p-3 cursor-pointer transition-all group',
-            event.bgClass,
-            event.hoverClass
-          ]"
-          :style="{ top: event.top + 'px', height: event.height + 'px' }"
+          v-for="record in todayRecords"
+          :key="record.id"
+          class="absolute left-16 right-0 backdrop-blur-sm border-l-4 border-primary rounded-r-xl p-3 bg-primary-container/20 hover:bg-primary-container/30 transition-all"
+          :style="getRecordStyle(record)"
         >
-          <div class="flex justify-between">
-            <span :class="['text-[11px] font-bold uppercase', event.timeColor]">{{ event.timeRange }}</span>
-            <span class="material-symbols-outlined text-sm opacity-0 group-hover:opacity-100 transition-opacity" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+          <div class="font-bold text-on-surface text-sm truncate">{{ record.taskTitle }}</div>
+          <div class="text-[10px] text-on-surface-variant mt-0.5">
+            {{ formatTime(record.startTime) }} - {{ formatTime(record.endTime) }}
+            <span class="font-bold ml-1">{{ formatDuration(record.durationSeconds) }}</span>
           </div>
-          <div class="font-bold text-on-surface mt-1">{{ event.title }}</div>
-          <div v-if="event.subtitle" :class="['text-[10px] font-medium', event.subtitleColor]">{{ event.subtitle }}</div>
         </div>
 
-        <div class="absolute left-16 right-0 h-[2px] bg-error z-10 before:content-[''] before:absolute before:w-3 before:h-3 before:bg-error before:rounded-full before:-left-1.5 before:-top-[5px]" :style="{ top: currentTimeLineTop + 'px' }"></div>
+        <div
+          class="absolute left-16 right-0 h-[2px] bg-error z-10 before:content-[''] before:absolute before:w-3 before:h-3 before:bg-error before:rounded-full before:-left-1.5 before:-top-[5px]"
+          :style="{ top: currentTimeLineTop + 'px' }"
+        ></div>
       </div>
     </div>
   </section>
@@ -74,73 +91,76 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useTimeRecordStore } from '../store/timeRecordStore'
 
-const activeTab = ref('Day')
-const tabs = ['Day', 'Week']
+const store = useTimeRecordStore()
 
-const timerSeconds = ref(6128)
-let timerInterval = null
+const activeTab = ref('day')
+const tabs = [
+  { value: 'day', label: '日' },
+  { value: 'week', label: '周' }
+]
 
-const timerDisplay = computed(() => {
-  const h = Math.floor(timerSeconds.value / 3600)
-  const m = Math.floor((timerSeconds.value % 3600) / 60)
-  const s = timerSeconds.value % 60
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+const START_HOUR = 6
+const END_HOUR = 23
+const HOUR_HEIGHT = 80
+
+const timeSlots = []
+for (let h = START_HOUR; h < END_HOUR; h++) {
+  timeSlots.push({ label: `${String(h).padStart(2, '0')}:00`, hour: h })
+}
+
+const timelineHeight = computed(() => (END_HOUR - START_HOUR) * HOUR_HEIGHT)
+
+const todayRecords = computed(() => store.getTodayRecords())
+
+const activeTimer = computed(() => {
+  return null
 })
 
-onMounted(() => {
-  timerInterval = setInterval(() => {
-    timerSeconds.value++
-  }, 1000)
+const activeTimerDisplay = computed(() => '00:00:00')
+
+const currentTimeLineTop = computed(() => {
+  const now = new Date()
+  const hours = now.getHours() + now.getMinutes() / 60
+  return Math.max(0, (hours - START_HOUR) * HOUR_HEIGHT)
+})
+
+function getRecordStyle(record) {
+  const start = new Date(record.startTime)
+  const end = new Date(record.endTime)
+  const startOffset = (start.getHours() + start.getMinutes() / 60 - START_HOUR) * HOUR_HEIGHT
+  const durationHours = Math.max(0.25, (end.getTime() - start.getTime()) / 3600000)
+  return {
+    top: Math.max(0, startOffset) + 'px',
+    height: (durationHours * HOUR_HEIGHT) + 'px'
+  }
+}
+
+function formatTime(isoStr) {
+  if (!isoStr) return ''
+  const d = new Date(isoStr)
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+function formatDuration(seconds) {
+  if (!seconds || seconds <= 0) return '0分钟'
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  if (h > 0) return `${h}小时${m > 0 ? m + '分钟' : ''}`
+  return `${m}分钟`
+}
+
+let refreshTimer = null
+
+onMounted(async () => {
+  await store.loadRecords()
+  refreshTimer = setInterval(() => {
+    void 0
+  }, 60000)
 })
 
 onUnmounted(() => {
-  clearInterval(timerInterval)
+  if (refreshTimer) clearInterval(refreshTimer)
 })
-
-const timeSlots = [
-  '09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
-  '01:00 PM', '02:00 PM', '03:00 PM'
-]
-
-const scheduleEvents = ref([
-  {
-    id: 1,
-    top: 20,
-    height: 160,
-    timeRange: '9:15 - 11:15 AM',
-    title: 'Focus Work: Wireframes',
-    subtitle: 'Design Project',
-    bgClass: 'bg-error-container/30 border-error',
-    hoverClass: 'hover:bg-error-container/40',
-    timeColor: 'text-error',
-    subtitleColor: 'text-error/80'
-  },
-  {
-    id: 2,
-    top: 240,
-    height: 80,
-    timeRange: '12:00 - 1:00 PM',
-    title: 'Lunch Break',
-    subtitle: null,
-    bgClass: 'bg-primary-container/20 border-primary',
-    hoverClass: 'hover:bg-primary-container/30',
-    timeColor: 'text-primary',
-    subtitleColor: null
-  },
-  {
-    id: 3,
-    top: 400,
-    height: 128,
-    timeRange: '2:00 - 3:30 PM',
-    title: 'Client Presentation',
-    subtitle: 'Stakeholder Review',
-    bgClass: 'bg-tertiary-container/20 border-tertiary',
-    hoverClass: 'hover:bg-tertiary-container/30',
-    timeColor: 'text-tertiary',
-    subtitleColor: 'text-tertiary/80'
-  }
-])
-
-const currentTimeLineTop = computed(() => 320)
 </script>
