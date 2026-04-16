@@ -96,6 +96,42 @@ function getTodayTotalSeconds() {
   return getTodayRecords().reduce((sum, r) => sum + (r.durationSeconds || 0), 0)
 }
 
+function getRecordsGroupedByDate() {
+  const grouped = {}
+  
+  state.records.forEach(record => {
+    const start = new Date(record.startTime)
+    const pad = (n) => String(n).padStart(2, '0')
+    const dateStr = `${start.getFullYear()}-${pad(start.getMonth() + 1)}-${pad(start.getDate())}`
+    
+    if (!grouped[dateStr]) {
+      grouped[dateStr] = []
+    }
+    
+    grouped[dateStr].push(record)
+  })
+  
+  // 按日期排序，最近的日期在前面
+  const sortedDates = Object.keys(grouped).sort((a, b) => new Date(b) - new Date(a))
+  
+  const result = []
+  sortedDates.forEach(date => {
+    result.push({
+      date,
+      records: grouped[date].sort((a, b) => new Date(a.startTime) - new Date(b.startTime)) // 按开始时间排序
+    })
+  })
+  
+  return result
+}
+
+function getDateRangeRecords(startDate, endDate) {
+  return state.records.filter(record => {
+    const recordDate = new Date(record.startTime).toISOString().split('T')[0]
+    return recordDate >= startDate && recordDate <= endDate
+  })
+}
+
 export function useTimeRecordStore() {
   if (!state.initialized && !state.loading) {
     loadRecords()
@@ -109,6 +145,8 @@ export function useTimeRecordStore() {
     deleteRecord,
     getRecordsByDate,
     getTodayRecords,
-    getTodayTotalSeconds
+    getTodayTotalSeconds,
+    getRecordsGroupedByDate,
+    getDateRangeRecords
   }
 }

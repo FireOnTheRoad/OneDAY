@@ -28,7 +28,9 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ]
     },
@@ -50,12 +52,14 @@
     "@electron-toolkit/utils": "^4.0.0",
     "@tailwindcss/vite": "^4.2.2",
     "@vitejs/plugin-vue": "^5.2.4",
+    "@vue/test-utils": "^2.4.6",
     "electron": "^41.2.0",
     "electron-builder": "^26.0.12",
     "electron-vite": "^3.1.0",
     "sharp": "^0.34.5",
     "tailwindcss": "^4.2.2",
-    "vite": "^5.4.21"
+    "vite": "^5.4.21",
+    "vitest": "^4.1.4"
   },
   "dependencies": {
     "vue": "^3.5.32",

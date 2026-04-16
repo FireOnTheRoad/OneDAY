@@ -5,7 +5,7 @@
         <div>
           <h2 class="text-xl font-extrabold text-on-surface headline">日程</h2>
           <p class="text-on-surface-variant font-medium text-sm mt-1">
-            今日已记录 {{ formatDuration(todayTotalSeconds) }}
+            {{ selectedDate === todayStr ? '今日' : formatDisplayDate(selectedDate) }} 已记录 {{ formatDuration(selectedDateTotalSeconds) }}
           </p>
         </div>
         <div class="flex items-center gap-2">
@@ -40,6 +40,37 @@
               <span class="text-sm">停止</span>
             </button>
           </div>
+        </div>
+      </div>
+
+      <!-- 日期导航 -->
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-3">
+          <button
+            class="p-2 bg-surface-container-high rounded-lg hover:bg-surface-variant transition-colors"
+            @click="prevDate"
+          >
+            <span class="material-symbols-outlined">chevron_left</span>
+          </button>
+          <button
+            class="p-2 bg-surface-container-high rounded-lg hover:bg-surface-variant transition-colors"
+            @click="nextDate"
+          >
+            <span class="material-symbols-outlined">chevron_right</span>
+          </button>
+          <button
+            class="px-3 py-1.5 bg-surface-container-high rounded-lg hover:bg-surface-variant transition-colors text-sm font-medium"
+            @click="goToday"
+          >
+            今天
+          </button>
+        </div>
+        <div class="flex items-center gap-2">
+          <input
+            v-model="selectedDate"
+            type="date"
+            class="px-3 py-1.5 bg-surface-container-highest border-none rounded-lg text-sm focus:ring-2 focus:ring-primary transition-all"
+          />
         </div>
       </div>
 
@@ -78,64 +109,59 @@
       </div>
     </div>
 
+    <!-- 按日期分组的日程记录 -->
     <div class="flex-1 overflow-y-auto p-6">
-      <div class="relative" :style="{ height: timelineHeight + 'px' }">
-        <div class="absolute inset-0 flex flex-col">
-          <div
-            v-for="hour in timeSlots"
-            :key="hour"
-            class="border-b border-surface-container-highest flex items-start pt-2 px-2 text-[10px] font-bold text-on-surface-variant/40"
-            :style="{ height: HOUR_HEIGHT + 'px' }"
-          >
-            {{ hour }}
-          </div>
-        </div>
+      <div v-if="store.state.loading" class="flex items-center justify-center py-20">
+        <span class="material-symbols-outlined animate-spin text-3xl text-primary">progress_activity</span>
+      </div>
 
+      <div v-else-if="groupedRecords.length === 0" class="flex flex-col items-center justify-center py-20">
+        <span class="material-symbols-outlined text-6xl text-on-surface-variant/30 mb-4">event_note</span>
+        <h3 class="text-lg font-bold text-on-surface-variant mb-1">暂无日程记录</h3>
+        <p class="text-sm text-on-surface-variant/60">点击上方"开始计时"按钮创建新的日程记录</p>
+      </div>
+
+      <div v-else class="space-y-8">
         <div
-          v-for="record in todayRecords"
-          :key="record.id"
-          :class="[
-            'absolute left-16 right-0 backdrop-blur-sm border-l-4 rounded-r-xl p-3 group transition-all',
-            recordBgClass
-          ]"
-          :style="getRecordStyle(record)"
+          v-for="group in groupedRecords"
+          :key="group.date"
+          class="bg-surface-container-lowest rounded-2xl shadow-sm border border-surface-container overflow-hidden"
         >
-          <div class="flex justify-between items-start">
-            <div class="flex-1 min-w-0">
-              <div class="font-bold text-on-surface text-sm truncate">{{ record.taskTitle }}</div>
-              <div class="text-[10px] text-on-surface-variant mt-0.5">
-                {{ formatTime(record.startTime) }} - {{ formatTime(record.endTime) }}
-                <span class="font-bold ml-1">{{ formatDuration(record.durationSeconds) }}</span>
+          <div class="px-6 py-3 bg-surface-container border-b border-surface-container flex justify-between items-center">
+            <h3 class="font-bold text-on-surface">{{ formatDisplayDate(group.date) }}</h3>
+            <span class="text-sm text-on-surface-variant">{{ formatDuration(getDateTotalSeconds(group.date)) }}</span>
+          </div>
+          <div class="p-6 space-y-3">
+            <div
+              v-for="record in group.records"
+              :key="record.id"
+              class="flex items-center gap-3 p-3 rounded-xl border-l-4 border-primary bg-primary-container/10 hover:bg-primary-container/20 transition-all"
+            >
+              <div class="w-16 text-sm font-bold text-on-surface-variant shrink-0">
+                {{ formatTime(record.startTime) }}
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="font-bold text-on-surface text-sm truncate">{{ record.taskTitle }}</div>
+                <div class="text-[10px] text-on-surface-variant mt-0.5">
+                  {{ formatTime(record.startTime) }} - {{ formatTime(record.endTime) }}
+                  <span class="font-bold ml-1">{{ formatDuration(record.durationSeconds) }}</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-1">
+                <button
+                  class="p-1 hover:bg-surface-container-high rounded-full transition-colors"
+                  @click="editRecord(record)"
+                >
+                  <span class="material-symbols-outlined text-sm text-on-surface-variant">edit</span>
+                </button>
+                <button
+                  class="p-1 hover:bg-error-container/30 rounded-full transition-colors"
+                  @click="handleDeleteRecord(record.id)"
+                >
+                  <span class="material-symbols-outlined text-sm text-error">delete</span>
+                </button>
               </div>
             </div>
-            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button
-                class="p-1 hover:bg-surface-container-high rounded-full transition-colors"
-                @click="editRecord(record)"
-              >
-                <span class="material-symbols-outlined text-sm text-on-surface-variant">edit</span>
-              </button>
-              <button
-                class="p-1 hover:bg-error-container/30 rounded-full transition-colors"
-                @click="handleDeleteRecord(record.id)"
-              >
-                <span class="material-symbols-outlined text-sm text-error">delete</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div
-          v-if="timerState.running || timerState.paused"
-          class="absolute left-16 right-0 bg-primary/15 border-l-4 border-primary rounded-r-xl p-3 z-10"
-          :style="getTimerBlockStyle()"
-        >
-          <div class="flex items-center gap-2">
-            <span class="material-symbols-outlined text-primary text-sm animate-pulse" style="font-variation-settings: 'FILL' 1;">timer</span>
-            <span class="font-bold text-primary text-sm truncate">{{ timerTaskTitle || '未命名任务' }}</span>
-          </div>
-          <div class="text-[10px] text-primary/70 mt-0.5">
-            {{ formatTime(timerState.startTime) }} - 进行中
           </div>
         </div>
       </div>
@@ -217,19 +243,28 @@ const timerInterval = ref(null)
 const showEditModal = ref(false)
 const editForm = ref({ id: '', taskTitle: '', startTime: '', endTime: '' })
 
-const START_HOUR = 6
-const END_HOUR = 23
-const HOUR_HEIGHT = 80
+// 日期导航相关
+const today = new Date()
+const todayStr = computed(() => {
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`
+})
+const selectedDate = ref(todayStr.value)
 
-const timeSlots = []
-for (let h = START_HOUR; h < END_HOUR; h++) {
-  timeSlots.push(`${String(h).padStart(2, '0')}:00`)
-}
+// 按日期分组的记录
+const groupedRecords = computed(() => {
+  return store.getRecordsGroupedByDate()
+})
 
-const timelineHeight = computed(() => (END_HOUR - START_HOUR) * HOUR_HEIGHT)
+// 选中日期的记录
+const selectedDateRecords = computed(() => {
+  return store.getRecordsByDate(selectedDate.value)
+})
 
-const todayRecords = computed(() => store.getTodayRecords())
-const todayTotalSeconds = computed(() => store.getTodayTotalSeconds())
+// 选中日期的总时长
+const selectedDateTotalSeconds = computed(() => {
+  return selectedDateRecords.value.reduce((sum, r) => sum + (r.durationSeconds || 0), 0)
+})
 
 const timerDisplay = computed(() => {
   const total = timerState.value.elapsedSeconds
@@ -243,8 +278,6 @@ const progressPercent = computed(() => {
   const seconds = timerState.value.elapsedSeconds % 3600
   return (seconds / 3600) * 100
 })
-
-const recordBgClass = 'bg-primary-container/20 border-primary hover:bg-primary-container/30'
 
 function startTimer() {
   timerState.value = {
@@ -338,30 +371,47 @@ function formatDuration(seconds) {
   return `${m}分钟`
 }
 
-function getRecordStyle(record) {
-  const start = new Date(record.startTime)
-  const end = new Date(record.endTime)
-  const startOffset = (start.getHours() + start.getMinutes() / 60 - START_HOUR) * HOUR_HEIGHT
-  const durationHours = Math.max(0.25, (end.getTime() - start.getTime()) / 3600000)
-  const height = durationHours * HOUR_HEIGHT
-
-  return {
-    top: Math.max(0, startOffset) + 'px',
-    height: height + 'px'
-  }
+function formatDisplayDate(dateStr) {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  const today = new Date()
+  const yesterday = new Date(today)
+  yesterday.setDate(yesterday.getDate() - 1)
+  const tomorrow = new Date(today)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  
+  const dateOnly = date.toISOString().split('T')[0]
+  const todayOnly = today.toISOString().split('T')[0]
+  const yesterdayOnly = yesterday.toISOString().split('T')[0]
+  const tomorrowOnly = tomorrow.toISOString().split('T')[0]
+  
+  if (dateOnly === todayOnly) return '今天'
+  if (dateOnly === yesterdayOnly) return '昨天'
+  if (dateOnly === tomorrowOnly) return '明天'
+  
+  const weekDays = ['日', '一', '二', '三', '四', '五', '六']
+  return `${date.getMonth() + 1}月${date.getDate()}日 星期${weekDays[date.getDay()]}`
 }
 
-function getTimerBlockStyle() {
-  if (!timerState.value.startTime) return { top: '0px', height: '40px' }
-  const start = new Date(timerState.value.startTime)
-  const startOffset = (start.getHours() + start.getMinutes() / 60 - START_HOUR) * HOUR_HEIGHT
-  const now = new Date()
-  const durationHours = Math.max(0.25, (now.getTime() - start.getTime()) / 3600000)
+function getDateTotalSeconds(dateStr) {
+  const records = store.getRecordsByDate(dateStr)
+  return records.reduce((sum, r) => sum + (r.durationSeconds || 0), 0)
+}
 
-  return {
-    top: Math.max(0, startOffset) + 'px',
-    height: (durationHours * HOUR_HEIGHT) + 'px'
-  }
+function prevDate() {
+  const date = new Date(selectedDate.value)
+  date.setDate(date.getDate() - 1)
+  selectedDate.value = date.toISOString().split('T')[0]
+}
+
+function nextDate() {
+  const date = new Date(selectedDate.value)
+  date.setDate(date.getDate() + 1)
+  selectedDate.value = date.toISOString().split('T')[0]
+}
+
+function goToday() {
+  selectedDate.value = todayStr.value
 }
 
 function editRecord(record) {
@@ -379,15 +429,15 @@ function editRecord(record) {
 async function saveEdit() {
   if (!editForm.value.taskTitle.trim()) return
 
-  const today = new Date()
-  const pad = (n) => String(n).padStart(2, '0')
-  const dateStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`
+  const record = store.state.records.find(r => r.id === editForm.value.id)
+  if (!record) return
 
+  const recordDate = new Date(record.startTime)
   const [sh, sm] = editForm.value.startTime.split(':').map(Number)
   const [eh, em] = editForm.value.endTime.split(':').map(Number)
 
-  const startIso = new Date(today.getFullYear(), today.getMonth(), today.getDate(), sh, sm).toISOString()
-  const endIso = new Date(today.getFullYear(), today.getMonth(), today.getDate(), eh, em).toISOString()
+  const startIso = new Date(recordDate.getFullYear(), recordDate.getMonth(), recordDate.getDate(), sh, sm).toISOString()
+  const endIso = new Date(recordDate.getFullYear(), recordDate.getMonth(), recordDate.getDate(), eh, em).toISOString()
   const duration = Math.max(0, Math.round((new Date(endIso).getTime() - new Date(startIso).getTime()) / 1000))
 
   await store.updateRecord(editForm.value.id, {
