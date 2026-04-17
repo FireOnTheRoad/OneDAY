@@ -88,7 +88,7 @@ body,
 .resize-edge-top {
   top: 0;
   left: 8px;
-  right: 8px;
+  right: 130px;
   height: 4px;
   cursor: n-resize;
 }
@@ -127,7 +127,7 @@ body,
 
 .resize-corner-tr {
   top: 0;
-  right: 0;
+  right: 130px;
   width: 8px;
   height: 4px;
   cursor: ne-resize;

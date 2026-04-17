@@ -89,8 +89,24 @@ function registerWindowIPC() {
     if (!dragState) return
     const win = BrowserWindow.fromWebContents(event.sender)
     if (!win) return
+    
     dragState.winX += deltaX
     dragState.winY += deltaY
+    
+    // 添加边界限制，防止窗口被拖拽到屏幕可视区域之外
+    const bounds = win.getBounds()
+    const screen = require('electron').screen
+    const display = screen.getDisplayMatching(bounds)
+    const workArea = display.workArea
+    
+    // 确保窗口左上角在可视区域内
+    dragState.winX = Math.max(workArea.x, dragState.winX)
+    dragState.winY = Math.max(workArea.y, dragState.winY)
+    
+    // 确保窗口右下角在可视区域内
+    dragState.winX = Math.min(workArea.x + workArea.width - bounds.width, dragState.winX)
+    dragState.winY = Math.min(workArea.y + workArea.height - bounds.height, dragState.winY)
+    
     win.setPosition(dragState.winX, dragState.winY)
   })
 

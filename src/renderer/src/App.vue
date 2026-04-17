@@ -104,7 +104,7 @@ function startResize(e, direction) {
           newBounds.height = newHeight
         }
 
-        await window.electronAPI.setBounds(newBounds)
+        await window.electronAPI.setWindowBounds(newBounds)
       }
 
       const handleUp = () => {
