@@ -1,6 +1,7 @@
 # OneDAY
 > 一日之计在于一日之计
 
+![OneDAY](OneDAY.png)
 个人使用的日程管理工具
 开发ing
 请期待EA版本的发布。

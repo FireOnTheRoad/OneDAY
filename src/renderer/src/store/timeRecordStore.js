@@ -47,6 +47,7 @@ async function addRecord(recordData) {
   const newRecord = {
     id: generateId(),
     taskTitle: recordData.taskTitle || '',
+    taskId: recordData.taskId || null,
     startTime: recordData.startTime,
     endTime: recordData.endTime,
     durationSeconds: recordData.durationSeconds || 0,
@@ -132,6 +133,14 @@ function getDateRangeRecords(startDate, endDate) {
   })
 }
 
+// 获取任务的工作时间（秒）
+function getTaskWorkTime(taskId) {
+  if (!taskId) return 0
+  return state.records
+    .filter(record => record.taskId === taskId)
+    .reduce((sum, record) => sum + (record.durationSeconds || 0), 0)
+}
+
 export function useTimeRecordStore() {
   if (!state.initialized && !state.loading) {
     loadRecords()
@@ -147,6 +156,7 @@ export function useTimeRecordStore() {
     getTodayRecords,
     getTodayTotalSeconds,
     getRecordsGroupedByDate,
-    getDateRangeRecords
+    getDateRangeRecords,
+    getTaskWorkTime
   }
 }

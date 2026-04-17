@@ -12,7 +12,7 @@
           <button
             v-if="!timerState.running"
             class="flex items-center gap-2 bg-primary text-on-primary px-5 py-2.5 rounded-xl font-bold shadow-md hover:opacity-90 active:scale-95 transition-all"
-            @click="startTimer"
+            @click="showStartModal = true"
           >
             <span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
             <span class="text-sm">开始计时</span>
@@ -168,6 +168,78 @@
     </div>
 
     <Teleport to="body">
+      <!-- 开始计时模态框 -->
+      <Transition name="modal">
+        <div v-if="showStartModal" class="fixed inset-0 z-[100] flex items-center justify-center">
+          <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="showStartModal = false"></div>
+          <div class="relative bg-surface-container-lowest rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+            <div class="flex items-center justify-between p-6 border-b border-surface-container">
+              <h2 class="text-lg font-extrabold text-on-surface headline">开始计时</h2>
+              <button class="p-2 hover:bg-surface-container-high rounded-full transition-colors text-on-surface-variant" @click="showStartModal = false">
+                <span class="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <div class="p-6 space-y-4">
+              <div>
+                <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">选择任务来源</label>
+                <div class="flex gap-2">
+                  <button
+                    :class="[
+                      'flex-1 py-3 rounded-xl font-bold text-sm transition-all',
+                      startForm.taskSource === 'todo' ? 'bg-primary text-on-primary' : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-variant'
+                    ]"
+                    @click="startForm.taskSource = 'todo'"
+                  >关联待办事项</button>
+                  <button
+                    :class="[
+                      'flex-1 py-3 rounded-xl font-bold text-sm transition-all',
+                      startForm.taskSource === 'manual' ? 'bg-primary text-on-primary' : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-variant'
+                    ]"
+                    @click="startForm.taskSource = 'manual'"
+                  >手动记录</button>
+                </div>
+              </div>
+              
+              <!-- 关联待办事项 -->
+              <div v-if="startForm.taskSource === 'todo'">
+                <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">选择待办事项</label>
+                <select
+                  v-model="startForm.taskId"
+                  class="w-full px-4 py-3 bg-surface-container-highest border-none rounded-xl focus:ring-2 focus:ring-primary text-sm"
+                >
+                  <option value="">-- 选择待办事项 --</option>
+                  <option v-for="task in pendingTasks" :key="task.id" :value="task.id">{{ task.title }}</option>
+                </select>
+              </div>
+              
+              <!-- 手动输入 -->
+              <div v-else-if="startForm.taskSource === 'manual'">
+                <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">任务内容 *</label>
+                <input
+                  v-model="startForm.taskTitle"
+                  class="w-full px-4 py-3 bg-surface-container-highest border-none rounded-xl focus:ring-2 focus:ring-primary text-sm"
+                  type="text"
+                  placeholder="输入任务内容..."
+                />
+              </div>
+              
+              <div class="flex gap-3 pt-2">
+                <button
+                  class="flex-1 py-3 rounded-xl font-bold text-on-surface-variant bg-surface-container-high hover:bg-surface-variant transition-all"
+                  @click="showStartModal = false"
+                >取消</button>
+                <button
+                  class="flex-1 py-3 rounded-xl font-bold bg-primary text-on-primary hover:opacity-90 active:scale-95 transition-all shadow-sm"
+                  @click="confirmStart"
+                  :disabled="!canStart"
+                >开始</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Transition>
+      
+      <!-- 编辑时间记录模态框 -->
       <Transition name="modal">
         <div v-if="showEditModal" class="fixed inset-0 z-[100] flex items-center justify-center">
           <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="showEditModal = false"></div>
@@ -226,8 +298,10 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useTimeRecordStore } from '../store/timeRecordStore'
+import { useTaskStore } from '../store/taskStore'
 
 const store = useTimeRecordStore()
+const taskStore = useTaskStore()
 
 const timerState = ref({
   running: false,
@@ -235,13 +309,20 @@ const timerState = ref({
   startTime: null,
   elapsedSeconds: 0,
   pausedAt: null,
-  totalPausedSeconds: 0
+  totalPausedSeconds: 0,
+  taskId: null
 })
 
 const timerTaskTitle = ref('')
 const timerInterval = ref(null)
 const showEditModal = ref(false)
+const showStartModal = ref(false)
 const editForm = ref({ id: '', taskTitle: '', startTime: '', endTime: '' })
+const startForm = ref({
+  taskSource: 'todo',
+  taskId: '',
+  taskTitle: ''
+})
 
 // 日期导航相关
 const today = new Date()
@@ -250,6 +331,11 @@ const todayStr = computed(() => {
   return `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`
 })
 const selectedDate = ref(todayStr.value)
+
+// 待办事项列表
+const pendingTasks = computed(() => {
+  return taskStore.getPendingTasks()
+})
 
 // 按日期分组的记录
 const groupedRecords = computed(() => {
@@ -266,6 +352,15 @@ const selectedDateTotalSeconds = computed(() => {
   return selectedDateRecords.value.reduce((sum, r) => sum + (r.durationSeconds || 0), 0)
 })
 
+// 是否可以开始计时
+const canStart = computed(() => {
+  if (startForm.value.taskSource === 'todo') {
+    return startForm.value.taskId
+  } else {
+    return startForm.value.taskTitle.trim()
+  }
+})
+
 const timerDisplay = computed(() => {
   const total = timerState.value.elapsedSeconds
   const h = Math.floor(total / 3600)
@@ -279,16 +374,33 @@ const progressPercent = computed(() => {
   return (seconds / 3600) * 100
 })
 
-function startTimer() {
+function confirmStart() {
+  if (!canStart.value) return
+  
+  let taskTitle = ''
+  let taskId = null
+  
+  if (startForm.value.taskSource === 'todo') {
+    const task = taskStore.state.tasks.find(t => t.id === startForm.value.taskId)
+    if (task) {
+      taskTitle = task.title
+      taskId = task.id
+    }
+  } else {
+    taskTitle = startForm.value.taskTitle.trim()
+  }
+  
   timerState.value = {
     running: true,
     paused: false,
     startTime: new Date(),
     elapsedSeconds: 0,
     pausedAt: null,
-    totalPausedSeconds: 0
+    totalPausedSeconds: 0,
+    taskId: taskId
   }
-  timerTaskTitle.value = ''
+  timerTaskTitle.value = taskTitle
+  showStartModal.value = false
   startTick()
 }
 
@@ -323,6 +435,7 @@ async function stopTimer() {
   if (duration > 0) {
     await store.addRecord({
       taskTitle: timerTaskTitle.value.trim(),
+      taskId: timerState.value.taskId,
       startTime: timerState.value.startTime.toISOString(),
       endTime: endTime.toISOString(),
       durationSeconds: Math.max(1, duration)
@@ -335,7 +448,8 @@ async function stopTimer() {
     startTime: null,
     elapsedSeconds: 0,
     pausedAt: null,
-    totalPausedSeconds: 0
+    totalPausedSeconds: 0,
+    taskId: null
   }
   timerTaskTitle.value = ''
 }
@@ -456,6 +570,7 @@ async function handleDeleteRecord(id) {
 
 onMounted(async () => {
   await store.loadRecords()
+  await taskStore.loadTasks()
 })
 
 onUnmounted(() => {

@@ -170,6 +170,22 @@ function getOverdueTasks() {
   )
 }
 
+// 获取任务的工作时间（秒）
+function getTaskWorkTime(taskId) {
+  // 这里需要导入timeRecordStore来获取记录
+  // 由于循环依赖问题，我们暂时返回0，实际使用时需要从timeRecordStore获取
+  return 0
+}
+
+// 格式化工作时间为 h m 格式
+function formatWorkTime(seconds) {
+  if (!seconds || seconds <= 0) return '0m'
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  if (h > 0) return `${h}h ${m}m`
+  return `${m}m`
+}
+
 export function useTaskStore() {
   if (!state.initialized && !state.loading) {
     loadTasks()
@@ -184,6 +200,8 @@ export function useTaskStore() {
     toggleTaskStatus,
     getTasksByStatus,
     getPendingTasks,
-    getOverdueTasks
+    getOverdueTasks,
+    getTaskWorkTime,
+    formatWorkTime
   }
 }
