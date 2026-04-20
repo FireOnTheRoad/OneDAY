@@ -109,8 +109,8 @@
       </div>
     </div>
 
-    <!-- 按日期分组的日程记录 -->
-    <div class="flex-1 overflow-y-auto p-6">
+    <!-- Toggl 风格时间轴 -->
+    <div class="flex-1 overflow-hidden p-6">
       <div v-if="store.state.loading" class="flex items-center justify-center py-20">
         <span class="material-symbols-outlined animate-spin text-3xl text-primary">progress_activity</span>
       </div>
@@ -121,45 +121,62 @@
         <p class="text-sm text-on-surface-variant/60">点击上方"开始计时"按钮创建新的日程记录</p>
       </div>
 
-      <div v-else class="space-y-8">
-        <div
-          v-for="group in groupedRecords"
-          :key="group.date"
-          class="bg-surface-container-lowest rounded-2xl shadow-sm border border-surface-container overflow-hidden"
-        >
-          <div class="px-6 py-3 bg-surface-container border-b border-surface-container flex justify-between items-center">
-            <h3 class="font-bold text-on-surface">{{ formatDisplayDate(group.date) }}</h3>
-            <span class="text-sm text-on-surface-variant">{{ formatDuration(getDateTotalSeconds(group.date)) }}</span>
-          </div>
-          <div class="p-6 space-y-3">
-            <div
-              v-for="record in group.records"
-              :key="record.id"
-              class="flex items-center gap-3 p-3 rounded-xl border-l-4 border-primary bg-primary-container/10 hover:bg-primary-container/20 transition-all"
-            >
-              <div class="w-16 text-sm font-bold text-on-surface-variant shrink-0">
-                {{ formatTime(record.startTime) }}
-              </div>
-              <div class="flex-1 min-w-0">
-                <div class="font-bold text-on-surface text-sm truncate">{{ record.taskTitle }}</div>
-                <div class="text-[10px] text-on-surface-variant mt-0.5">
-                  {{ formatTime(record.startTime) }} - {{ formatTime(record.endTime) }}
-                  <span class="font-bold ml-1">{{ formatDuration(record.durationSeconds) }}</span>
+      <div v-else class="h-full flex flex-col">
+        <!-- 时间轴容器 -->
+        <div class="flex-1 overflow-y-auto">
+          <div
+            v-for="group in groupedRecords"
+            :key="group.date"
+            class="mb-6"
+          >
+            <!-- 日期标题 -->
+            <div class="flex items-center justify-between mb-3 pb-2 border-b border-surface-container">
+              <h3 class="font-bold text-on-surface">{{ formatDisplayDate(group.date) }}</h3>
+              <span class="text-sm text-on-surface-variant font-bold">{{ formatDuration(getDateTotalSeconds(group.date)) }}</span>
+            </div>
+
+            <!-- 时间轴 -->
+            <div class="relative" :style="{ height: timelineHeight + 'px' }">
+              <!-- 时间刻度 -->
+              <div class="absolute inset-0 flex flex-col">
+                <div
+                  v-for="hour in timeSlots"
+                  :key="hour"
+                  class="border-b border-surface-container-highest flex items-start pt-1 px-2 text-[10px] font-bold text-on-surface-variant/40"
+                  :style="{ height: HOUR_HEIGHT + 'px' }"
+                >
+                  {{ hour }}
                 </div>
               </div>
-              <div class="flex items-center gap-1">
-                <button
-                  class="p-1 hover:bg-surface-container-high rounded-full transition-colors"
-                  @click="editRecord(record)"
-                >
-                  <span class="material-symbols-outlined text-sm text-on-surface-variant">edit</span>
-                </button>
-                <button
-                  class="p-1 hover:bg-error-container/30 rounded-full transition-colors"
-                  @click="handleDeleteRecord(record.id)"
-                >
-                  <span class="material-symbols-outlined text-sm text-error">delete</span>
-                </button>
+
+              <!-- 时间记录块 -->
+              <div
+                v-for="record in group.records"
+                :key="record.id"
+                class="absolute left-16 right-2 rounded-lg p-2 shadow-sm hover:shadow-md transition-all cursor-pointer group"
+                :class="getRecordColorClass(record)"
+                :style="getRecordStyle(record)"
+              >
+                <div class="flex items-start justify-between">
+                  <div class="font-bold text-white text-sm truncate drop-shadow-sm">{{ record.taskTitle }}</div>
+                  <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      class="p-1 bg-white/20 rounded hover:bg-white/30"
+                      @click.stop="editRecord(record)"
+                    >
+                      <span class="material-symbols-outlined text-xs text-white">edit</span>
+                    </button>
+                    <button
+                      class="p-1 bg-white/20 rounded hover:bg-error/50"
+                      @click.stop="handleDeleteRecord(record.id)"
+                    >
+                      <span class="material-symbols-outlined text-xs text-white">delete</span>
+                    </button>
+                  </div>
+                </div>
+                <div class="text-[10px] text-white/80 mt-0.5 drop-shadow-sm">
+                  {{ formatTime(record.startTime) }} - {{ formatTime(record.endTime) }}
+                </div>
               </div>
             </div>
           </div>
@@ -302,6 +319,7 @@ import { useTaskStore } from '../store/taskStore'
 
 const store = useTimeRecordStore()
 const taskStore = useTaskStore()
+const state = store.state // 用于直接修改计时器状态
 
 const timerState = ref({
   running: false,
@@ -390,7 +408,8 @@ function confirmStart() {
     taskTitle = startForm.value.taskTitle.trim()
   }
   
-  timerState.value = {
+  // 同步到 store
+  state.timerState = {
     running: true,
     paused: false,
     startTime: new Date(),
@@ -399,6 +418,9 @@ function confirmStart() {
     totalPausedSeconds: 0,
     taskId: taskId
   }
+  state.timerTaskTitle = taskTitle
+  
+  timerState.value = state.timerState
   timerTaskTitle.value = taskTitle
   showStartModal.value = false
   startTick()
@@ -408,6 +430,8 @@ function pauseTimer() {
   timerState.value.paused = true
   timerState.value.running = false
   timerState.value.pausedAt = new Date()
+  // 同步到 store
+  state.timerState = { ...timerState.value }
   stopTick()
 }
 
@@ -419,6 +443,8 @@ function resumeTimer() {
   timerState.value.paused = false
   timerState.value.running = true
   timerState.value.pausedAt = null
+  // 同步到 store
+  state.timerState = { ...timerState.value }
   startTick()
 }
 
@@ -442,7 +468,8 @@ async function stopTimer() {
     })
   }
 
-  timerState.value = {
+  // 清除 store 中的计时器状态
+  state.timerState = {
     running: false,
     paused: false,
     startTime: null,
@@ -451,6 +478,9 @@ async function stopTimer() {
     totalPausedSeconds: 0,
     taskId: null
   }
+  state.timerTaskTitle = ''
+  
+  timerState.value = state.timerState
   timerTaskTitle.value = ''
 }
 
@@ -460,6 +490,8 @@ function startTick() {
     if (timerState.value.startTime) {
       const elapsed = (Date.now() - timerState.value.startTime.getTime() - timerState.value.totalPausedSeconds * 1000) / 1000
       timerState.value.elapsedSeconds = Math.floor(elapsed)
+      // 同步到 store
+      state.timerState = { ...timerState.value }
     }
   }, 200)
 }
@@ -526,6 +558,56 @@ function nextDate() {
 
 function goToday() {
   selectedDate.value = todayStr.value
+}
+
+// 时间轴配置
+const START_HOUR = 6
+const END_HOUR = 23
+const HOUR_HEIGHT = 60
+
+const timeSlots = []
+for (let h = START_HOUR; h <= END_HOUR; h++) {
+  timeSlots.push(`${String(h).padStart(2, '0')}:00`)
+}
+
+const timelineHeight = (END_HOUR - START_HOUR) * HOUR_HEIGHT
+
+// 颜色方案
+const colorClasses = [
+  'bg-blue-500',
+  'bg-green-500',
+  'bg-amber-500',
+  'bg-purple-500',
+  'bg-rose-500',
+  'bg-cyan-500',
+  'bg-orange-500',
+  'bg-indigo-500'
+]
+
+function getRecordColorClass(record) {
+  const index = record.id ? record.id.charCodeAt(0) % colorClasses.length : 0
+  return colorClasses[index]
+}
+
+function getRecordStyle(record) {
+  if (!record.startTime || !record.endTime) {
+    return { top: '0px', height: '0px' }
+  }
+  
+  const start = new Date(record.startTime)
+  const end = new Date(record.endTime)
+  
+  const startHours = start.getHours() + start.getMinutes() / 60
+  const endHours = end.getHours() + end.getMinutes() / 60
+  
+  const startOffset = Math.max(0, (startHours - START_HOUR) * HOUR_HEIGHT)
+  const durationHours = Math.max(0.25, (endHours - startHours))
+  const height = durationHours * HOUR_HEIGHT
+  
+  return {
+    top: `${startOffset}px`,
+    height: `${height}px`
+  }
 }
 
 function editRecord(record) {

@@ -49,7 +49,7 @@
           <img
             alt="用户头像"
             class="w-full h-full object-cover"
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuClau6SroaEv-oqQb7jc7frEybxIKG5u9KcT1fhIUo8czvGF-aOCbkoVEhiB_NshV-zalZ3kYHJjsHPsF-WFGI9OxvkZBWIxtTDMUoNEv_MVTht1EzMH1oNtXVaetsIxhZwxtPu-6PglALIoDIKv6S9Y3UzTE1TpVHL8FFmivsSDXm_BQtES9GP2ulyx8s5sPJ6gAHA0whQX7LxAYvvFqujzCQXpMX_CJfJYHThs3SbiQBbuKgrsYX6tVAjBHCie5qK1lJYrT5cMGqL"
+            src="https://ui-avatars.com/api/?name=User&background=0D8ABC&color=fff"
             style="-webkit-app-region: no-drag"
           />
         </div>

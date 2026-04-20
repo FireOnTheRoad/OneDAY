@@ -34,8 +34,12 @@ async function loadTasks() {
   state.loading = true
   state.error = null
   try {
-    const data = await window.electronAPI.readTasks()
-    state.tasks = data.tasks || []
+    if (window.electronAPI?.readTasks) {
+      const data = await window.electronAPI.readTasks()
+      state.tasks = data.tasks || []
+    } else {
+      state.tasks = []
+    }
     state.initialized = true
   } catch (err) {
     state.error = '加载任务数据失败: ' + err.message
@@ -51,15 +55,17 @@ async function loadTasks() {
  */
 async function saveTasks() {
   try {
-    const data = {
-      version: 1,
-      lastUpdated: new Date().toISOString(),
-      tasks: state.tasks
-    }
-    const result = await window.electronAPI.writeTasks(data)
-    if (!result.success) {
-      state.error = '保存任务数据失败: ' + (result.error || '未知错误')
-      console.error('[TaskStore] 保存失败:', result.error)
+    if (window.electronAPI?.writeTasks) {
+      const data = {
+        version: 1,
+        lastUpdated: new Date().toISOString(),
+        tasks: JSON.parse(JSON.stringify(state.tasks))
+      }
+      const result = await window.electronAPI.writeTasks(data)
+      if (!result.success) {
+        state.error = '保存任务数据失败: ' + (result.error || '未知错误')
+        console.error('[TaskStore] 保存失败:', result.error)
+      }
     }
   } catch (err) {
     state.error = '保存任务数据失败: ' + err.message

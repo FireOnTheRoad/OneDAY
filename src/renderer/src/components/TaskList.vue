@@ -39,25 +39,43 @@
       >
         <div class="flex justify-between items-start mb-2">
           <div class="flex items-center gap-3">
-            <span
-              :class="['material-symbols-outlined', priorityIconColor(task.priority, task.status)]"
-              :style="task.status === 'completed' ? 'font-variation-settings: \'FILL\' 1;' : ''"
-            >{{ taskIcon(task.priority, task.status) }}</span>
+            <button
+              @click="handleToggleStatus(task.id)"
+              class="p-1 hover:bg-surface-container-high rounded-full transition-colors"
+            >
+              <span
+                :class="['material-symbols-outlined', priorityIconColor(task.priority, task.status)]"
+                :style="task.status === 'completed' ? 'font-variation-settings: \'FILL\' 1;' : ''"
+              >{{ taskIcon(task.priority, task.status) }}</span>
+            </button>
             <h3 :class="['font-bold text-on-surface', task.status === 'completed' ? 'line-through' : '']">{{ task.title }}</h3>
           </div>
-          <span
-            v-if="taskBadge(task)"
-            :class="['text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider', taskBadgeClass(task)]"
-          >{{ taskBadge(task) }}</span>
+          <div class="flex items-center gap-2">
+            <span
+              v-if="taskBadge(task)"
+              :class="['text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider', taskBadgeClass(task)]"
+            >{{ taskBadge(task) }}</span>
+            <button
+              @click="$emit('editTask', task)"
+              class="p-1.5 opacity-0 group-hover:opacity-100 hover:bg-surface-container-high rounded-lg transition-all"
+              title="编辑任务"
+            >
+              <span class="material-symbols-outlined text-on-surface-variant">edit</span>
+            </button>
+          </div>
         </div>
 
-        <p v-if="task.description" class="text-on-surface-variant text-sm line-clamp-2">{{ task.description }}</p>
+        <p v-if="task.description" class="text-on-surface-variant text-sm line-clamp-2 ml-9">{{ task.description }}</p>
 
         <div class="mt-4 flex items-center justify-between">
-          <div class="flex items-center gap-4 text-xs text-on-surface-variant">
+          <div class="flex items-center gap-4 text-xs text-on-surface-variant ml-9">
             <div v-if="task.dueDate" class="flex items-center gap-1">
               <span class="material-symbols-outlined text-sm">event</span>
               <span>{{ formatDueDate(task.dueDate) }}</span>
+            </div>
+            <div v-if="task.tags?.length" class="flex items-center gap-1">
+              <span class="material-symbols-outlined text-sm">label</span>
+              <span>{{ task.tags.join(', ') }}</span>
             </div>
           </div>
         </div>
@@ -71,6 +89,12 @@ import { computed, onMounted } from 'vue'
 import { useTaskStore } from '@/store/taskStore'
 
 const store = useTaskStore()
+
+const emit = defineEmits(['editTask'])
+
+function handleToggleStatus(id) {
+  store.toggleTaskStatus(id)
+}
 
 // 加载任务数据
 onMounted(async () => {

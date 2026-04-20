@@ -4,8 +4,28 @@ const state = reactive({
   records: [],
   loading: false,
   error: null,
-  initialized: false
+  initialized: false,
+  // 计时器状态
+  timerState: {
+    running: false,
+    paused: false,
+    startTime: null,
+    elapsedSeconds: 0,
+    pausedAt: null,
+    totalPausedSeconds: 0,
+    taskId: null
+  },
+  timerTaskTitle: ''
 })
+
+// 计算属性
+function getTimerDisplay() {
+  const total = state.timerState.elapsedSeconds
+  const h = Math.floor(total / 3600)
+  const m = Math.floor((total % 3600) / 60)
+  const s = total % 60
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+}
 
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).substring(2, 9)
@@ -15,8 +35,13 @@ async function loadRecords() {
   state.loading = true
   state.error = null
   try {
-    const data = await window.electronAPI.readTimeRecords()
-    state.records = data.records || []
+    if (window.electronAPI?.readTimeRecords) {
+      const data = await window.electronAPI.readTimeRecords()
+      state.records = data.records || []
+    } else {
+      // 开发环境下使用模拟数据
+      state.records = []
+    }
     state.initialized = true
   } catch (err) {
     state.error = '加载时间记录失败: ' + err.message
@@ -28,14 +53,16 @@ async function loadRecords() {
 
 async function saveRecords() {
   try {
-    const data = {
-      version: 1,
-      lastUpdated: new Date().toISOString(),
-      records: state.records
-    }
-    const result = await window.electronAPI.writeTimeRecords(data)
-    if (!result.success) {
-      state.error = '保存时间记录失败: ' + (result.error || '未知错误')
+    if (window.electronAPI?.writeTimeRecords) {
+      const data = {
+        version: 1,
+        lastUpdated: new Date().toISOString(),
+        records: JSON.parse(JSON.stringify(state.records))
+      }
+      const result = await window.electronAPI.writeTimeRecords(data)
+      if (!result.success) {
+        state.error = '保存时间记录失败: ' + (result.error || '未知错误')
+      }
     }
   } catch (err) {
     state.error = '保存时间记录失败: ' + err.message
@@ -148,6 +175,9 @@ export function useTimeRecordStore() {
 
   return {
     state: readonly(state),
+    timerState: state.timerState,
+    timerTaskTitle: state.timerTaskTitle,
+    timerDisplay: getTimerDisplay(),
     loadRecords,
     addRecord,
     updateRecord,

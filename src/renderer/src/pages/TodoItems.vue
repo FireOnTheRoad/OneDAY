@@ -78,6 +78,12 @@
                 class="bg-tertiary-fixed text-on-tertiary-fixed text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider"
               >已完成</span>
               <button
+                class="p-1 opacity-0 group-hover:opacity-100 hover:bg-surface-container-high rounded-lg transition-all"
+                @click="handleEditTask(task)"
+              >
+                <span class="material-symbols-outlined text-sm text-on-surface-variant">edit</span>
+              </button>
+              <button
                 class="p-1 opacity-0 group-hover:opacity-100 hover:bg-error-container/30 rounded-full transition-all"
                 @click="handleDelete(task.id)"
               >
@@ -116,6 +122,12 @@
       @close="showAddModal = false"
       @submit="handleAddTask"
     />
+    <EditTaskModal
+      :visible="showEditModal"
+      :task="editingTask"
+      @close="closeEditModal"
+      @submit="handleUpdateTask"
+    />
   </div>
 </template>
 
@@ -123,9 +135,12 @@
 import { ref, computed, onMounted } from 'vue'
 import { useTaskStore } from '../store/taskStore'
 import AddTaskModal from '../components/AddTaskModal.vue'
+import EditTaskModal from '../components/EditTaskModal.vue'
 
 const store = useTaskStore()
 const showAddModal = ref(false)
+const showEditModal = ref(false)
+const editingTask = ref(null)
 const activeFilter = ref('all')
 
 const filterOptions = [
@@ -185,6 +200,21 @@ function priorityIconClass(p) {
 async function handleAddTask(taskData) {
   await store.addTask(taskData)
   showAddModal.value = false
+}
+
+function handleEditTask(task) {
+  editingTask.value = task
+  showEditModal.value = true
+}
+
+function closeEditModal() {
+  showEditModal.value = false
+  editingTask.value = null
+}
+
+async function handleUpdateTask(taskData) {
+  await store.updateTask(taskData.id, taskData)
+  closeEditModal()
 }
 
 async function handleToggleStatus(task) {

@@ -73,48 +73,50 @@ function startResize(e, direction) {
   const startScreenX = e.screenX
   const startScreenY = e.screenY
 
-  window.electronAPI.isMaximized().then((maximized) => {
-    if (maximized) return
+  if (window.electronAPI?.isMaximized && window.electronAPI?.getWindowBounds && window.electronAPI?.setWindowBounds) {
+    window.electronAPI.isMaximized().then((maximized) => {
+      if (maximized) return
 
-    window.electronAPI.getWindowBounds().then((bounds) => {
-      if (!bounds) return
+      window.electronAPI.getWindowBounds().then((bounds) => {
+        if (!bounds) return
 
-      const startBounds = { ...bounds }
+        const startBounds = { ...bounds }
 
-      const handleMove = async (moveEvent) => {
-        const dx = moveEvent.screenX - startScreenX
-        const dy = moveEvent.screenY - startScreenY
+        const handleMove = async (moveEvent) => {
+          const dx = moveEvent.screenX - startScreenX
+          const dy = moveEvent.screenY - startScreenY
 
-        const newBounds = { ...startBounds }
+          const newBounds = { ...startBounds }
 
-        if (direction.includes('e')) {
-          newBounds.width = Math.max(MIN_WIDTH, startBounds.width + dx)
+          if (direction.includes('e')) {
+            newBounds.width = Math.max(MIN_WIDTH, startBounds.width + dx)
+          }
+          if (direction.includes('s')) {
+            newBounds.height = Math.max(MIN_HEIGHT, startBounds.height + dy)
+          }
+          if (direction.includes('w')) {
+            const newWidth = Math.max(MIN_WIDTH, startBounds.width - dx)
+            newBounds.x = startBounds.x + (startBounds.width - newWidth)
+            newBounds.width = newWidth
+          }
+          if (direction.includes('n')) {
+            const newHeight = Math.max(MIN_HEIGHT, startBounds.height - dy)
+            newBounds.y = startBounds.y + (startBounds.height - newHeight)
+            newBounds.height = newHeight
+          }
+
+          await window.electronAPI.setWindowBounds(newBounds)
         }
-        if (direction.includes('s')) {
-          newBounds.height = Math.max(MIN_HEIGHT, startBounds.height + dy)
-        }
-        if (direction.includes('w')) {
-          const newWidth = Math.max(MIN_WIDTH, startBounds.width - dx)
-          newBounds.x = startBounds.x + (startBounds.width - newWidth)
-          newBounds.width = newWidth
-        }
-        if (direction.includes('n')) {
-          const newHeight = Math.max(MIN_HEIGHT, startBounds.height - dy)
-          newBounds.y = startBounds.y + (startBounds.height - newHeight)
-          newBounds.height = newHeight
+
+        const handleUp = () => {
+          document.removeEventListener('mousemove', handleMove)
+          document.removeEventListener('mouseup', handleUp)
         }
 
-        await window.electronAPI.setWindowBounds(newBounds)
-      }
-
-      const handleUp = () => {
-        document.removeEventListener('mousemove', handleMove)
-        document.removeEventListener('mouseup', handleUp)
-      }
-
-      document.addEventListener('mousemove', handleMove)
-      document.addEventListener('mouseup', handleUp)
+        document.addEventListener('mousemove', handleMove)
+        document.addEventListener('mouseup', handleUp)
+      })
     })
-  })
+  }
 }
 </script>

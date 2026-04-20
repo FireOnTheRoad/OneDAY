@@ -22,7 +22,7 @@ function createWindow() {
     minHeight: 600,
     icon: getIconPath(),
     webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
+      preload: join(__dirname, '../preload/index.mjs'),
       sandbox: false
     }
   })
