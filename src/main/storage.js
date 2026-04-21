@@ -66,16 +66,19 @@ const DATA_DIR = join(APP_DATA_DIR, 'data')
 const BACKUP_DIR = join(APP_DATA_DIR, 'backups')
 const TASKS_BACKUP_DIR = join(BACKUP_DIR, 'tasks')
 const TIME_RECORDS_BACKUP_DIR = join(BACKUP_DIR, 'timeRecords')
+const PROJECTS_BACKUP_DIR = join(BACKUP_DIR, 'projects')
 
 const TASKS_FILE = join(DATA_DIR, 'tasks.json')
 const SETTINGS_FILE = join(DATA_DIR, 'settings.json')
 const TIME_RECORDS_FILE = join(DATA_DIR, 'timeRecords.json')
+const PROJECTS_FILE = join(DATA_DIR, 'projects.json')
 
 const MAX_BACKUPS = 10
 
 const DEFAULT_TASKS = { version: 1, lastUpdated: null, tasks: [] }
 const DEFAULT_SETTINGS = { version: 1, lastUpdated: null, theme: 'light', language: 'zh-CN' }
 const DEFAULT_TIME_RECORDS = { version: 1, lastUpdated: null, records: [] }
+const DEFAULT_PROJECTS = { version: 1, lastUpdated: null, projects: [] }
 
 function ensureDir(dirPath) {
   if (!existsSync(dirPath)) {
@@ -115,6 +118,21 @@ function validateTimeRecordsData(data) {
     if (!rec.startTime || isNaN(Date.parse(rec.startTime))) return false
     if (!rec.endTime || isNaN(Date.parse(rec.endTime))) return false
     if (typeof rec.durationSeconds !== 'number' || rec.durationSeconds < 0) return false
+  }
+  return true
+}
+
+function validateProjectsData(data) {
+  if (!data || typeof data !== 'object') return false
+  if (typeof data.version !== 'number') return false
+  if (!Array.isArray(data.projects)) return false
+  for (const project of data.projects) {
+    if (!project.id || typeof project.id !== 'string') return false
+    if (!project.name || typeof project.name !== 'string') return false
+    if (project.status && !['active', 'paused', 'completed', 'archived'].includes(project.status)) return false
+    if (project.priority && !['high', 'medium', 'low'].includes(project.priority)) return false
+    if (project.startDate && isNaN(Date.parse(project.startDate))) return false
+    if (project.dueDate && isNaN(Date.parse(project.dueDate))) return false
   }
   return true
 }
@@ -182,6 +200,7 @@ function initializeStorage() {
   ensureDir(DATA_DIR)
   ensureDir(TASKS_BACKUP_DIR)
   ensureDir(TIME_RECORDS_BACKUP_DIR)
+  ensureDir(PROJECTS_BACKUP_DIR)
 
   if (!existsSync(TASKS_FILE)) {
     safeWriteJson(TASKS_FILE, DEFAULT_TASKS)
@@ -191,6 +210,9 @@ function initializeStorage() {
   }
   if (!existsSync(TIME_RECORDS_FILE)) {
     safeWriteJson(TIME_RECORDS_FILE, DEFAULT_TIME_RECORDS)
+  }
+  if (!existsSync(PROJECTS_FILE)) {
+    safeWriteJson(PROJECTS_FILE, DEFAULT_PROJECTS)
   }
 
   console.log(`[Storage] 数据目录: ${APP_DATA_DIR}`)
@@ -250,6 +272,24 @@ export function registerStorageIPC() {
     data.lastUpdated = new Date().toISOString()
     createBackup(TIME_RECORDS_FILE, TIME_RECORDS_BACKUP_DIR)
     return safeWriteJson(TIME_RECORDS_FILE, data)
+  })
+
+  ipcMain.handle('storage:readProjects', () => {
+    const data = safeReadJson(PROJECTS_FILE, DEFAULT_PROJECTS)
+    if (!validateProjectsData(data)) {
+      console.warn('[Storage] 项目数据验证失败，返回默认数据')
+      return JSON.parse(JSON.stringify(DEFAULT_PROJECTS))
+    }
+    return data
+  })
+
+  ipcMain.handle('storage:writeProjects', (_event, data) => {
+    if (!validateProjectsData(data)) {
+      return { success: false, error: '项目数据验证失败，格式不合法' }
+    }
+    data.lastUpdated = new Date().toISOString()
+    createBackup(PROJECTS_FILE, PROJECTS_BACKUP_DIR)
+    return safeWriteJson(PROJECTS_FILE, data)
   })
 
   ipcMain.handle('storage:getDataPath', () => {

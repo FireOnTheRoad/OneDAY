@@ -7,6 +7,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   writeSettings: (data) => ipcRenderer.invoke('storage:writeSettings', data),
   readTimeRecords: () => ipcRenderer.invoke('storage:readTimeRecords'),
   writeTimeRecords: (data) => ipcRenderer.invoke('storage:writeTimeRecords', data),
+  readProjects: () => ipcRenderer.invoke('storage:readProjects'),
+  writeProjects: (data) => ipcRenderer.invoke('storage:writeProjects', data),
   getDataPath: () => ipcRenderer.invoke('storage:getDataPath'),
   minimizeWindow: () => ipcRenderer.invoke('window:minimize'),
   maximizeWindow: () => ipcRenderer.invoke('window:maximize'),

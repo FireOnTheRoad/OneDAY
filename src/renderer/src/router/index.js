@@ -3,6 +3,7 @@ import MyTasks from '../pages/MyTasks.vue'
 import TodoItems from '../pages/TodoItems.vue'
 import Calendar from '../pages/Calendar.vue'
 import Projects from '../pages/Projects.vue'
+import ProjectDetail from '../pages/ProjectDetail.vue'
 import Schedule from '../pages/Schedule.vue'
 
 const routes = [
@@ -11,6 +12,7 @@ const routes = [
   { path: '/todo-items', name: 'todo-items', component: TodoItems, meta: { title: '待办事项' } },
   { path: '/calendar', name: 'calendar', component: Calendar, meta: { title: '日历' } },
   { path: '/projects', name: 'projects', component: Projects, meta: { title: '项目' } },
+  { path: '/projects/:id', name: 'project-detail', component: ProjectDetail, meta: { title: '项目详情' } },
   { path: '/schedule', name: 'schedule', component: Schedule, meta: { title: '日程' } }
 ]
 

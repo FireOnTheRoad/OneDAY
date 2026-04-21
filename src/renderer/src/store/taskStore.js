@@ -93,7 +93,12 @@ async function addTask(taskData) {
     dueDate: taskData.dueDate || null,
     createdAt: now,
     updatedAt: now,
-    tags: taskData.tags || []
+    tags: taskData.tags || [],
+    projectId: taskData.projectId || null,
+    startDate: taskData.startDate || null,
+    duration: taskData.duration || null,
+    dependencies: taskData.dependencies || [],
+    estimatedHours: taskData.estimatedHours || null
   }
 
   state.tasks.unshift(newTask)
@@ -192,9 +197,52 @@ function formatWorkTime(seconds) {
   return `${m}m`
 }
 
+/**
+ * 获取项目的所有任务
+ * @param {string} projectId - 项目 ID
+ */
+function getTasksByProject(projectId) {
+  return state.tasks.filter(t => t.projectId === projectId)
+}
+
+/**
+ * 数据迁移 - 为现有任务添加新字段
+ */
+function migrateTaskData() {
+  let hasChanges = false
+  state.tasks.forEach(task => {
+    if (task.projectId === undefined) {
+      task.projectId = null
+      hasChanges = true
+    }
+    if (task.startDate === undefined) {
+      task.startDate = null
+      hasChanges = true
+    }
+    if (task.duration === undefined) {
+      task.duration = null
+      hasChanges = true
+    }
+    if (task.dependencies === undefined) {
+      task.dependencies = []
+      hasChanges = true
+    }
+    if (task.estimatedHours === undefined) {
+      task.estimatedHours = null
+      hasChanges = true
+    }
+  })
+
+  if (hasChanges) {
+    saveTasks()
+  }
+}
+
 export function useTaskStore() {
   if (!state.initialized && !state.loading) {
-    loadTasks()
+    loadTasks().then(() => {
+      migrateTaskData()
+    })
   }
 
   return {
@@ -207,7 +255,9 @@ export function useTaskStore() {
     getTasksByStatus,
     getPendingTasks,
     getOverdueTasks,
+    getTasksByProject,
     getTaskWorkTime,
-    formatWorkTime
+    formatWorkTime,
+    migrateTaskData
   }
 }

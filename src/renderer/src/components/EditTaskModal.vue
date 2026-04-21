@@ -69,6 +69,56 @@
             </div>
 
             <div>
+              <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">所属项目</label>
+              <select
+                v-model="form.projectId"
+                class="w-full px-4 py-2 bg-surface-container-highest border-none rounded-xl focus:ring-2 focus:ring-primary text-sm transition-all"
+              >
+                <option value="">无项目</option>
+                <option
+                  v-for="project in projects"
+                  :key="project.id"
+                  :value="project.id"
+                >
+                  {{ project.name }}
+                </option>
+              </select>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">开始日期</label>
+                <input
+                  v-model="form.startDate"
+                  class="w-full px-4 py-2 bg-surface-container-highest border-none rounded-xl focus:ring-2 focus:ring-primary text-sm transition-all"
+                  type="date"
+                />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">持续天数</label>
+                <input
+                  v-model="form.duration"
+                  class="w-full px-4 py-2 bg-surface-container-highest border-none rounded-xl focus:ring-2 focus:ring-primary text-sm transition-all"
+                  type="number"
+                  min="1"
+                  placeholder="天数"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">预估工时</label>
+              <input
+                v-model="form.estimatedHours"
+                class="w-full px-4 py-2 bg-surface-container-highest border-none rounded-xl focus:ring-2 focus:ring-primary text-sm transition-all"
+                type="number"
+                min="0"
+                step="0.5"
+                placeholder="小时"
+              />
+            </div>
+
+            <div>
               <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">标签</label>
               <div class="flex flex-wrap gap-2">
                 <button
@@ -116,7 +166,8 @@
 </template>
 
 <script setup>
-import { ref, reactive, watch } from 'vue'
+import { ref, reactive, watch, onMounted } from 'vue'
+import { useProjectStore } from '../store/projectStore'
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -125,15 +176,22 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'submit'])
 
+const projectStore = useProjectStore()
+
 const form = reactive({
   title: '',
   description: '',
   priority: 'medium',
   dueDate: '',
-  tags: []
+  startDate: '',
+  duration: null,
+  estimatedHours: null,
+  tags: [],
+  projectId: null
 })
 
 const errorMessage = ref('')
+const projects = ref([])
 
 const priorities = [
   { value: 'high', label: '高', activeClass: 'border-error bg-error-container text-on-error-container' },
@@ -143,13 +201,22 @@ const priorities = [
 
 const availableTags = ['设计', '开发', '会议', '文档', '紧急', '待审核']
 
+onMounted(async () => {
+  await projectStore.loadProjects()
+  projects.value = projectStore.state.projects
+})
+
 watch(() => props.task, (newTask) => {
   if (newTask) {
     form.title = newTask.title || ''
     form.description = newTask.description || ''
     form.priority = newTask.priority || 'medium'
     form.dueDate = newTask.dueDate || ''
+    form.startDate = newTask.startDate || ''
+    form.duration = newTask.duration || null
+    form.estimatedHours = newTask.estimatedHours || null
     form.tags = [...(newTask.tags || [])]
+    form.projectId = newTask.projectId || null
   }
 }, { immediate: true })
 
@@ -179,7 +246,11 @@ function handleSubmit() {
     description: form.description.trim(),
     priority: form.priority,
     dueDate: form.dueDate || null,
-    tags: [...form.tags]
+    startDate: form.startDate || null,
+    duration: form.duration ? parseInt(form.duration) : null,
+    estimatedHours: form.estimatedHours ? parseFloat(form.estimatedHours) : null,
+    tags: [...form.tags],
+    projectId: form.projectId
   })
 
   errorMessage.value = ''

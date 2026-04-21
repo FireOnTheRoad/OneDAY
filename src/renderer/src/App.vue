@@ -18,6 +18,7 @@
     </div>
     <AddTaskModal
       :visible="showAddModal"
+      :defaultProjectId="currentProjectId"
       @close="showAddModal = false"
       @submit="handleAddTask"
     />
@@ -25,14 +26,23 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
+import { useRoute } from 'vue-router'
 import AppHeader from './components/AppHeader.vue'
 import SideNav from './components/SideNav.vue'
 import AddTaskModal from './components/AddTaskModal.vue'
 import { useTaskStore } from './store/taskStore'
 
+const route = useRoute()
 const store = useTaskStore()
 const showAddModal = ref(false)
+
+const currentProjectId = computed(() => {
+  if (route.name === 'project-detail') {
+    return route.params.id
+  }
+  return route.query.projectId || null
+})
 
 const MIN_WIDTH = 900
 const MIN_HEIGHT = 600
