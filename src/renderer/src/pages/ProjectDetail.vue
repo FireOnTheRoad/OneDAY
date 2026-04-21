@@ -119,6 +119,11 @@
           </div>
         </div>
 
+        <GanttChart
+          :tasks="projectTasks"
+          @taskClick="handleTaskClick"
+        />
+
         <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm">
           <div class="flex items-center justify-between mb-4">
             <h3 class="text-lg font-bold text-on-surface">项目任务</h3>
@@ -205,6 +210,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useProjectStore } from '../store/projectStore'
 import { useTaskStore } from '../store/taskStore'
 import ProjectModal from '../components/ProjectModal.vue'
+import GanttChart from '../components/GanttChart.vue'
 
 const route = useRoute()
 const router = useRouter()
