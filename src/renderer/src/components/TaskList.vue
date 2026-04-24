@@ -77,6 +77,10 @@
               <span class="material-symbols-outlined text-sm">label</span>
               <span>{{ task.tags.join(', ') }}</span>
             </div>
+            <div v-if="getTaskWorkTime(task.id)" class="flex items-center gap-1">
+              <span class="material-symbols-outlined text-sm">schedule</span>
+              <span>已用时 {{ formatWorkTime(getTaskWorkTime(task.id)) }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -87,10 +91,26 @@
 <script setup>
 import { computed, onMounted } from 'vue'
 import { useTaskStore } from '@/store/taskStore'
+import { useTimeRecordStore } from '@/store/timeRecordStore'
 
 const store = useTaskStore()
+const timeRecordStore = useTimeRecordStore()
 
 const emit = defineEmits(['editTask'])
+
+// 计算任务的工作时间
+function getTaskWorkTime(taskId) {
+  return timeRecordStore.getTaskWorkTime(taskId)
+}
+
+// 格式化工作时长
+function formatWorkTime(seconds) {
+  if (!seconds || seconds <= 0) return ''
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  if (h > 0) return `${h}h ${m}m`
+  return `${m}m`
+}
 
 function handleToggleStatus(id) {
   store.toggleTaskStatus(id)

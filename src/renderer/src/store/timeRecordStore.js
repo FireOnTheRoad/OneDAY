@@ -106,9 +106,8 @@ async function deleteRecord(id) {
 
 function getRecordsByDate(dateStr) {
   return state.records.filter(r => {
-    const start = new Date(r.startTime)
-    const pad = (n) => String(n).padStart(2, '0')
-    const recDate = `${start.getFullYear()}-${pad(start.getMonth() + 1)}-${pad(start.getDate())}`
+    // 提取 ISO 日期字符串的日期部分，避免时区问题
+    const recDate = r.startTime ? r.startTime.split('T')[0] : ''
     return recDate === dateStr
   })
 }
