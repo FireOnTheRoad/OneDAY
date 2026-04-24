@@ -409,7 +409,7 @@ function confirmStart() {
   }
   
   // 同步到 store
-  state.timerState = {
+  store.setTimerState({
     running: true,
     paused: false,
     startTime: new Date(),
@@ -417,10 +417,10 @@ function confirmStart() {
     pausedAt: null,
     totalPausedSeconds: 0,
     taskId: taskId
-  }
-  state.timerTaskTitle = taskTitle
+  })
+  store.setTimerTaskTitle(taskTitle)
   
-  timerState.value = state.timerState
+  Object.assign(timerState.value, store.timerState)
   timerTaskTitle.value = taskTitle
   showStartModal.value = false
   startTick()
@@ -431,7 +431,7 @@ function pauseTimer() {
   timerState.value.running = false
   timerState.value.pausedAt = new Date()
   // 同步到 store
-  state.timerState = { ...timerState.value }
+  store.setTimerState({ ...timerState.value })
   stopTick()
 }
 
@@ -444,7 +444,7 @@ function resumeTimer() {
   timerState.value.running = true
   timerState.value.pausedAt = null
   // 同步到 store
-  state.timerState = { ...timerState.value }
+  store.setTimerState({ ...timerState.value })
   startTick()
 }
 
@@ -469,7 +469,7 @@ async function stopTimer() {
   }
 
   // 清除 store 中的计时器状态
-  state.timerState = {
+  store.setTimerState({
     running: false,
     paused: false,
     startTime: null,
@@ -477,10 +477,10 @@ async function stopTimer() {
     pausedAt: null,
     totalPausedSeconds: 0,
     taskId: null
-  }
-  state.timerTaskTitle = ''
+  })
+  store.setTimerTaskTitle('')
   
-  timerState.value = state.timerState
+  Object.assign(timerState.value, store.timerState)
   timerTaskTitle.value = ''
 }
 
@@ -491,7 +491,7 @@ function startTick() {
       const elapsed = (Date.now() - timerState.value.startTime.getTime() - timerState.value.totalPausedSeconds * 1000) / 1000
       timerState.value.elapsedSeconds = Math.floor(elapsed)
       // 同步到 store
-      state.timerState = { ...timerState.value }
+      store.setTimerState({ ...timerState.value })
     }
   }, 200)
 }

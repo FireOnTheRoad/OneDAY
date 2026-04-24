@@ -1,4 +1,4 @@
-import { reactive, readonly } from 'vue'
+import { reactive, readonly, computed } from 'vue'
 
 const state = reactive({
   records: [],
@@ -174,9 +174,11 @@ export function useTimeRecordStore() {
 
   return {
     state: readonly(state),
-    timerState: state.timerState,
-    timerTaskTitle: state.timerTaskTitle,
+    timerState: readonly(state.timerState),
+    timerTaskTitle: computed(() => state.timerTaskTitle),
     timerDisplay: getTimerDisplay(),
+    setTimerState: (newState) => { Object.assign(state.timerState, newState) },
+    setTimerTaskTitle: (title) => { state.timerTaskTitle = title },
     loadRecords,
     addRecord,
     updateRecord,
